@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+_dev_*
+result.json
+*.export.json
+.DS_Store
+Thumbs.db

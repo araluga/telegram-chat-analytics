@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Analytics</title>
+    <meta name="description" content="Telegram chat export analytics in your browser: activity, word trends, reactions, yearly recap and an AI analyst.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=6">
+    <script>
+        // Тема и язык применяются до отрисовки, чтобы не было «вспышки»
+        try {
+            const t = localStorage.getItem('tga_theme');
+            if (t) document.documentElement.dataset.theme = t;
+            const l = localStorage.getItem('tga_lang') || ((navigator.language || '').toLowerCase().startsWith('ru') ? 'ru' : 'en');
+            document.documentElement.lang = l;
+        } catch (e) {}
+    </script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="#" id="brand-link">
+                <span class="brand-logo" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M21.9 4.6 18.7 19.7c-.2 1.1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13.4l-4.8-1.5c-1-.3-1.1-1 .2-1.5L20.5 3.1c.9-.3 1.6.2 1.4 1.5Z"/></svg>
+                </span>
+                <span>Telegram Analytics</span>
+            </a>
+            <div class="topbar-chat hidden" id="topbar-chat">
+                <span class="topbar-chat-name" id="chat-name"></span>
+                <span class="topbar-chat-meta" id="chat-meta"></span>
+            </div>
+            <div class="topbar-actions">
+                <button class="btn btn-ghost hidden" id="open-another-btn" type="button">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                    <span data-i18n="nav.openAnother"></span>
+                </button>
+                <button class="icon-btn lang-btn" id="lang-toggle" type="button" data-i18n-title="nav.lang"></button>
+                <button class="icon-btn" id="theme-toggle" type="button" data-i18n-title="nav.theme">
+                    <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <input type="file" id="file-input" accept=".json,application/json" hidden>
+
+    <main class="container">
+        <!-- ===== Стартовый экран / Landing ===== -->
+        <section id="landing" class="landing">
+            <div class="hero">
+                <h1 data-i18n-html="hero.title"></h1>
+                <p class="hero-sub" data-i18n="hero.sub"></p>
+            </div>
+
+            <div id="drop-zone" class="drop-zone" tabindex="0" role="button" data-i18n-title="drop.aria">
+                <div class="drop-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M14 3v4a1 1 0 0 0 1 1h4M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2ZM12 11v6m0-6-2.5 2.5M12 11l2.5 2.5"/></svg>
+                </div>
+                <p class="drop-title" data-i18n-html="drop.title"></p>
+                <p class="drop-hint" data-i18n-html="drop.hint"></p>
+            </div>
+
+            <div class="demo-row">
+                <button type="button" class="btn btn-soft" id="demo-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 5.1v13.8a1 1 0 0 0 1.5.9l10.9-6.9a1 1 0 0 0 0-1.7L9.5 4.2A1 1 0 0 0 8 5.1Z"/></svg>
+                    <span data-i18n="landing.demo"></span>
+                </button>
+            </div>
+
+            <div id="chat-picker" class="card chat-picker hidden">
+                <div class="card-head">
+                    <h2 data-i18n="picker.title"></h2>
+                    <span class="muted" id="chat-picker-count"></span>
+                </div>
+                <input type="search" id="chat-picker-search" class="input" data-i18n-ph="picker.search">
+                <div id="chat-picker-list" class="chat-picker-list"></div>
+            </div>
+
+            <ol class="howto">
+                <li><span class="howto-num">1</span><div data-i18n-html="howto.1"></div></li>
+                <li><span class="howto-num">2</span><div data-i18n-html="howto.2"></div></li>
+                <li><span class="howto-num">3</span><div data-i18n-html="howto.3"></div></li>
+            </ol>
+        </section>
+
+        <!-- ===== Загрузка / Loading ===== -->
+        <section id="loading" class="loading hidden" aria-live="polite">
+            <div class="spinner"></div>
+            <p id="loading-text"></p>
+        </section>
+
+        <!-- ===== Дашборд / Dashboard ===== -->
+        <div id="dashboard" class="dashboard hidden">
+            <section class="kpis" id="kpis"></section>
+
+            <section class="card" id="activity-card">
+                <div class="card-head">
+                    <div>
+                        <h2 data-i18n="activity.title"></h2>
+                        <p class="muted small" data-i18n="activity.sub"></p>
+                    </div>
+                    <div class="card-tools">
+                        <div class="legend" id="chart-legend">
+                            <button type="button" class="legend-item active" data-series="messages"><span class="swatch swatch-msg"></span><span data-i18n="series.messages"></span></button>
+                            <button type="button" class="legend-item active" data-series="stickers"><span class="swatch swatch-stk"></span><span data-i18n="series.stickers"></span></button>
+                        </div>
+                        <div class="segmented" id="granularity">
+                            <button type="button" data-g="day" data-i18n="gran.day"></button>
+                            <button type="button" data-g="week" data-i18n="gran.week"></button>
+                            <button type="button" data-g="month" data-i18n="gran.month"></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-wrap" id="chart-wrap">
+                    <canvas id="activity-chart"></canvas>
+                </div>
+            </section>
+
+            <section class="card" id="trend-card">
+                <div class="card-head">
+                    <div>
+                        <h2 data-i18n="trend.title"></h2>
+                        <p class="muted small" data-i18n="trend.sub"></p>
+                    </div>
+                    <div class="segmented" id="trend-granularity">
+                        <button type="button" data-g="day" data-i18n="gran.day"></button>
+                        <button type="button" data-g="week" data-i18n="gran.week"></button>
+                        <button type="button" data-g="month" data-i18n="gran.month"></button>
+                    </div>
+                </div>
+                <form class="trend-form" id="trend-form">
+                    <input type="search" id="trend-input" class="input" data-i18n-ph="trend.placeholder" autocomplete="off">
+                    <button type="submit" class="btn btn-primary" data-i18n="trend.show"></button>
+                </form>
+                <div class="trend-suggest" id="trend-suggest"></div>
+                <div class="chart-wrap chart-wrap-sm" id="trend-wrap">
+                    <canvas id="trend-chart"></canvas>
+                    <div class="chart-empty hidden" id="trend-empty"></div>
+                </div>
+                <div class="trend-summary" id="trend-summary"></div>
+            </section>
+
+            <div class="grid-2">
+                <section class="card">
+                    <div class="card-head"><h2 data-i18n="years.title"></h2></div>
+                    <div id="years" class="years"></div>
+                </section>
+                <section class="card">
+                    <div class="card-head">
+                        <div>
+                            <h2 data-i18n="rhythm.title"></h2>
+                            <p class="muted small" id="rhythm-sub"></p>
+                        </div>
+                    </div>
+                    <div id="heatmap" class="heatmap"></div>
+                </section>
+            </div>
+
+            <section class="card">
+                <div class="card-head">
+                    <h2 data-i18n="users.title"></h2>
+                    <span class="muted small" id="users-sub"></span>
+                </div>
+                <div id="users" class="users"></div>
+                <button type="button" class="btn btn-soft btn-block hidden" id="users-more"></button>
+            </section>
+
+            <section class="card" id="reactions-card">
+                <div class="card-head">
+                    <div>
+                        <h2 data-i18n="react.title"></h2>
+                        <p class="muted small" id="reactions-sub"></p>
+                    </div>
+                </div>
+                <div id="reactions" class="reactions"></div>
+            </section>
+
+            <div class="grid-2 grid-words">
+                <section class="card">
+                    <div class="card-head">
+                        <h2 data-i18n="words.title"></h2>
+                        <div class="card-tools">
+                            <select id="word-user" class="input input-sm"></select>
+                            <input type="search" id="word-search" class="input input-sm" data-i18n-ph="words.search">
+                        </div>
+                    </div>
+                    <div id="words" class="words"></div>
+                    <button type="button" class="btn btn-soft btn-block hidden" id="words-more"></button>
+                </section>
+                <div class="stack">
+                    <section class="card">
+                        <div class="card-head">
+                            <h2 data-i18n="emoji.title"></h2>
+                            <div class="segmented" id="emoji-mode">
+                                <button type="button" data-m="text" class="active" data-i18n="emoji.text"></button>
+                                <button type="button" data-m="sticker" data-i18n="emoji.stickers"></button>
+                            </div>
+                        </div>
+                        <div id="emoji" class="emoji-grid"></div>
+                    </section>
+                    <section class="card">
+                        <div class="card-head"><h2 data-i18n="media.title"></h2></div>
+                        <div id="media" class="media-list"></div>
+                    </section>
+                </div>
+            </div>
+
+            <section class="card" id="wrapped-card">
+                <div class="card-head">
+                    <div>
+                        <h2 data-i18n="wrap.title"></h2>
+                        <p class="muted small" data-i18n="wrap.sub"></p>
+                    </div>
+                </div>
+                <div class="wrapped">
+                    <div class="wrapped-preview">
+                        <canvas id="wrapped-canvas" width="1080" height="1350"></canvas>
+                    </div>
+                    <div class="wrapped-side">
+                        <div class="wrapped-years" id="wrapped-years"></div>
+                        <ul class="wrapped-facts" id="wrapped-facts"></ul>
+                        <div class="wrapped-actions">
+                            <button type="button" class="btn btn-primary" id="wrapped-download">
+                                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16"/></svg>
+                                <span data-i18n="wrap.download"></span>
+                            </button>
+                            <button type="button" class="btn btn-ghost" id="wrapped-copy">
+                                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></g></svg>
+                                <span data-i18n="wrap.copy"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card" id="viewer-card">
+                <div class="card-head">
+                    <h2 data-i18n="viewer.title"></h2>
+                    <span class="muted small" id="viewer-count"></span>
+                </div>
+                <div class="viewer-controls">
+                    <div class="date-nav">
+                        <button type="button" class="icon-btn" id="viewer-prev" data-i18n-title="viewer.prev">
+                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <input type="date" id="viewer-date" class="input">
+                        <button type="button" class="icon-btn" id="viewer-next" data-i18n-title="viewer.next">
+                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    </div>
+                    <input type="search" id="viewer-search" class="input viewer-search" data-i18n-ph="viewer.search">
+                    <select id="viewer-user" class="input"></select>
+                    <div class="segmented" id="viewer-scope">
+                        <button type="button" data-scope="day" class="active" data-i18n="viewer.day"></button>
+                        <button type="button" data-scope="all" data-i18n="viewer.all"></button>
+                    </div>
+                </div>
+                <div id="viewer-messages" class="viewer-messages"></div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer" id="footer">
+        <span data-i18n="footer.privacy"></span>
+        <a href="https://github.com/araluga/telegram-chat-analytics" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </footer>
+
+    <div id="drag-overlay" class="drag-overlay hidden"><div data-i18n="drag.overlay"></div></div>
+    <div id="chart-tooltip" class="tooltip hidden" role="tooltip"></div>
+    <div id="toast" class="toast hidden" role="alert"></div>
+
+    <!-- ===== ИИ-ассистент / AI assistant ===== -->
+    <div id="ai-widget" class="ai-widget hidden">
+        <button id="ai-toggle-btn" class="ai-fab" type="button" data-i18n-title="ai.name">
+            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9L12 2Zm7 12 .9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9L19 14ZM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7L5 15Z"/></svg>
+        </button>
+
+        <div id="ai-chat-window" class="ai-window hidden" role="dialog">
+            <div class="ai-head">
+                <div class="ai-title">
+                    <span class="ai-avatar" aria-hidden="true">✦</span>
+                    <div>
+                        <div class="ai-name" data-i18n="ai.name"></div>
+                        <div class="ai-status" id="ai-status"></div>
+                    </div>
+                </div>
+                <div class="ai-head-actions">
+                    <button id="ai-clear-btn" class="icon-btn icon-btn-sm" type="button" data-i18n-title="ai.clear">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
+                    </button>
+                    <button id="ai-settings-btn" class="icon-btn icon-btn-sm" type="button" data-i18n-title="ai.settings">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></g></svg>
+                    </button>
+                    <button id="ai-close-btn" class="icon-btn icon-btn-sm" type="button" data-i18n-title="ai.close">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div id="ai-settings-panel" class="ai-settings hidden">
+                <h3 data-i18n="ai.settingsTitle"></h3>
+                <p class="muted small" data-i18n="ai.settingsDesc"></p>
+                <label class="field">
+                    <span data-i18n="ai.key"></span>
+                    <input type="password" id="ai-api-key-input" class="input" data-i18n-ph="ai.keyPh" autocomplete="off">
+                </label>
+                <label class="field">
+                    <span data-i18n="ai.model"></span>
+                    <input type="text" id="ai-model-input" class="input" placeholder="llama-3.3-70b-versatile">
+                </label>
+                <label class="field">
+                    <span data-i18n="ai.base"></span>
+                    <input type="text" id="ai-base-url-input" class="input" placeholder="https://api.groq.com/openai/v1">
+                </label>
+                <label class="check">
+                    <input type="checkbox" id="ai-include-sample">
+                    <span data-i18n="ai.sample"></span>
+                </label>
+                <p class="muted small" id="ai-server-key-note"></p>
+                <div class="ai-settings-actions">
+                    <button id="ai-settings-save" class="btn btn-primary" type="button" data-i18n="ai.save"></button>
+                    <button id="ai-settings-cancel" class="btn btn-ghost" type="button" data-i18n="ai.cancel"></button>
+                </div>
+            </div>
+
+            <div id="ai-messages" class="ai-messages"></div>
+            <div id="ai-suggestions" class="ai-suggestions"></div>
+
+            <form class="ai-input-row" id="ai-form">
+                <input type="text" id="ai-input" class="input" data-i18n-ph="ai.input" autocomplete="off">
+                <button id="ai-send-btn" class="btn btn-primary" type="submit" data-i18n-title="ai.send">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="main.js?v=6"></script>
+</body>
+</html>
