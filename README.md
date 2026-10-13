@@ -2,6 +2,8 @@
 
 **English** · [Русский](README.ru.md)
 
+**▶ Try it online: <https://araluga.github.io/telegram-chat-analytics/?lang=en>** — no installation; add `&demo` to the link to open a demo chat.
+
 Turn a Telegram chat export into a beautiful, interactive dashboard: activity charts, word trends, reactions, a shareable "year in review" card, a message browser and an AI analyst.
 
 Everything runs **in your browser** — your chat file is never uploaded anywhere. The only optional exception is the AI assistant, which sends aggregated statistics to the API you configure.
